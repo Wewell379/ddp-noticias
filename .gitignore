@@ -1,0 +1,49 @@
+# Archivos de HTTrack
+~hts-tmp/
+hts-cache/
+cookies.txt
+hts-log.txt
+backblue.gif
+fade.gif
+
+# Carpetas de otros dominios (basura de HTTrack)
+www.facebook.com/
+www.tiktok.com/
+www.instagram.com/
+www.youtube.com/
+www.google.com/
+www.google-analytics.com/
+www.gstatic.com/
+www.googletagmanager.com/
+www.wsperu.info/
+fonts.googleapis.com/
+cdn.thinglink.me/
+cdn.taboola.com/
+i.ytimg.com/
+instagram.flim19-1.fna.fbcdn.net/
+scontent.cdninstagram.com/
+scontent.flim19-1.fna.fbcdn.net/
+static.cdninstagram.com/
+static.xx.fbcdn.net/
+connect.facebook.net/
+platform.twitter.com/
+pagead2.googlesyndication.com/
+static.addtoany.com/
+securepubads.g.doubleclick.net/
+maxcdn.bootstrapcdn.com/
+sf16-website-login.neutral.ttwstatic.com/
+servg1.net/
+e.infogram.com/
+portal.andina.pe/
+elperuano.pe/
+andina.pe/
+minart.pe/
+diarioelnoticiero.com/
+
+# Configuración local (no subir credenciales reales)
+hash.php
+
+# Sistema
+.DS_Store
+Thumbs.db
+*.log
