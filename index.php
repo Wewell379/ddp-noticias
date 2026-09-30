@@ -4,14 +4,22 @@ require 'config/db.php';
 $page_title = 'DDP Noticias - Diálogo y Desarrollo Perú';
 $current = 'inicio';
 
-$reportajes = $pdo->query("SELECT * FROM reportajes ORDER BY fecha DESC LIMIT 4")->fetchAll();
-$destacado  = $reportajes[0] ?? null;
-$otros      = array_slice($reportajes, 1, 3);
+// Reportajes publicados (excluye borradores)
+$reportajes = $pdo->query("SELECT * FROM reportajes WHERE estado = 'publicado' ORDER BY fecha DESC LIMIT 4")->fetchAll();
+$destacado = $reportajes[0] ?? null;
+$otros = array_slice($reportajes, 1, 3);
 
-$noticias = $pdo->query("SELECT * FROM noticias ORDER BY fecha DESC LIMIT 3")->fetchAll();
-$boletin  = $pdo->query("SELECT * FROM boletines ORDER BY fecha DESC LIMIT 1")->fetch();
-$podcasts = $pdo->query("SELECT * FROM podcasts ORDER BY fecha DESC LIMIT 4")->fetchAll();
-$especiales = $pdo->query("SELECT * FROM especiales ORDER BY fecha DESC")->fetchAll();
+// Noticias publicadas
+$noticias = $pdo->query("SELECT * FROM noticias WHERE estado = 'publicado' ORDER BY fecha DESC LIMIT 3")->fetchAll();
+
+// Boletín más reciente (boletines no tiene columna estado)
+$boletin = $pdo->query("SELECT * FROM boletines ORDER BY fecha DESC LIMIT 1")->fetch();
+
+// Podcasts publicados
+$podcasts = $pdo->query("SELECT * FROM podcasts WHERE estado = 'publicado' ORDER BY fecha DESC LIMIT 4")->fetchAll();
+
+// Especiales publicados
+$especiales = $pdo->query("SELECT * FROM especiales WHERE estado = 'publicado' ORDER BY fecha DESC")->fetchAll();
 
 require 'includes/header.php';
 ?>
