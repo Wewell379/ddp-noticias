@@ -8,7 +8,6 @@ $por_pagina = 9;
 $pagina = max(1, (int)($_GET['p'] ?? 1));
 $offset = ($pagina - 1) * $por_pagina;
 
-// === Filtros ===
 $busqueda = trim($_GET['q'] ?? '');
 $filtro_cat = trim($_GET['cat'] ?? '');
 
@@ -26,18 +25,15 @@ if ($filtro_cat !== '') {
 }
 $sql_where = 'WHERE ' . implode(' AND ', $where);
 
-// === Total ===
 $stmt = $pdo->prepare("SELECT COUNT(*) FROM reportajes $sql_where");
 $stmt->execute($params);
 $total = $stmt->fetchColumn();
 $total_paginas = ceil($total / $por_pagina);
 
-// === Reportajes paginados ===
 $stmt = $pdo->prepare("SELECT * FROM reportajes $sql_where ORDER BY fecha DESC LIMIT $por_pagina OFFSET $offset");
 $stmt->execute($params);
 $reportajes = $stmt->fetchAll();
 
-// === Categorías para filtro ===
 $categorias = $pdo->query("SELECT DISTINCT categoria FROM reportajes WHERE categoria IS NOT NULL ORDER BY categoria")->fetchAll(PDO::FETCH_COLUMN);
 
 require 'includes/header.php';
@@ -54,24 +50,18 @@ require 'includes/header.php';
 </section>
 
 <div class="container py-4">
-  <!-- BUSCADOR Y FILTROS -->
   <form method="get" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;background:#111a28;padding:16px;border-radius:12px;margin-bottom:30px;">
     <input type="text" name="q" placeholder="Buscar reportajes..." value="<?= htmlspecialchars($busqueda) ?>"
            style="flex:1;min-width:200px;padding:11px 16px;border-radius:8px;border:1px solid #1f2937;background:#0d1520;color:#fff;font-size:14px;">
-
     <select name="cat" style="padding:11px 16px;border-radius:8px;border:1px solid #1f2937;background:#0d1520;color:#fff;font-size:14px;">
       <option value="">Todas las categorías</option>
       <?php foreach ($categorias as $c): ?>
-        <option value="<?= htmlspecialchars($c) ?>" <?= $filtro_cat===$c?'selected':'' ?>>
-          <?= htmlspecialchars($c) ?>
-        </option>
+        <option value="<?= htmlspecialchars($c) ?>" <?= $filtro_cat===$c?'selected':'' ?>><?= htmlspecialchars($c) ?></option>
       <?php endforeach; ?>
     </select>
-
     <button type="submit" style="padding:11px 24px;background:#ff2e2e;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">
       <i class="fa fa-search"></i> Buscar
     </button>
-
     <?php if ($busqueda || $filtro_cat): ?>
       <a href="reportajes.php" style="padding:11px 16px;background:#1a2332;color:#fff;border-radius:8px;text-decoration:none;">
         <i class="fa fa-times"></i> Limpiar
@@ -93,10 +83,12 @@ require 'includes/header.php';
             <?php endif; ?>
           </div>
         <?php else: ?>
-          <?php foreach ($reportajes as $r): ?>
+          <?php foreach ($reportajes as $r):
+            $ruta_card = str_starts_with($r['imagen'], 'uploads/') ? $r['imagen'] : 'assets/images/' . $r['imagen'];
+          ?>
             <div class="col-lg-4 col-md-6 grids5-info mt-4">
               <a href="reportaje.php?slug=<?= urlencode($r['slug']) ?>" class="d-block">
-                <img src="assets/images/<?= htmlspecialchars($r['imagen']) ?>" alt="" class="img-fluid"
+                <img src="<?= htmlspecialchars($ruta_card) ?>" alt="" class="img-fluid"
                      style="width:100%;height:250px;object-fit:cover;border-radius:10px;">
               </a>
               <div class="blog-info">
@@ -120,16 +112,13 @@ require 'includes/header.php';
         <?php endif; ?>
       </div>
 
-      <!-- PAGINACIÓN -->
       <?php if ($total_paginas > 1): ?>
         <div class="pagination mt-5">
           <ul class="d-flex justify-content-center" style="list-style:none;gap:8px;">
             <?php for ($i = 1; $i <= $total_paginas; $i++): ?>
               <li>
                 <a href="?p=<?= $i ?>&q=<?= urlencode($busqueda) ?>&cat=<?= urlencode($filtro_cat) ?>"
-                   class="btn <?= ($i==$pagina)?'btn-primary':'btn-outline-primary' ?>">
-                  <?= $i ?>
-                </a>
+                   class="btn <?= ($i==$pagina)?'btn-primary':'btn-outline-primary' ?>"><?= $i ?></a>
               </li>
             <?php endfor; ?>
           </ul>

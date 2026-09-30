@@ -4,7 +4,6 @@ require 'config/db.php';
 $slug = $_GET['slug'] ?? '';
 if (!$slug) { header('Location: reportajes.php'); exit; }
 
-// Solo reportajes publicados
 $stmt = $pdo->prepare("SELECT * FROM reportajes WHERE slug = ? AND estado = 'publicado'");
 $stmt->execute([$slug]);
 $r = $stmt->fetch();
@@ -24,23 +23,19 @@ if (!$r) {
     exit;
 }
 
-// Incrementar vistas
 $pdo->prepare("UPDATE reportajes SET vistas = vistas + 1 WHERE id = ?")->execute([$r['id']]);
 $r['vistas'] = $r['vistas'] + 1;
 
-// Reportajes relacionados (misma categoría)
 $stmt = $pdo->prepare("SELECT * FROM reportajes WHERE categoria = ? AND id != ? AND estado = 'publicado' ORDER BY fecha DESC LIMIT 3");
 $stmt->execute([$r['categoria'], $r['id']]);
 $relacionados = $stmt->fetchAll();
 
-// Si no hay relacionados, traer los más recientes
 if (empty($relacionados)) {
     $stmt = $pdo->prepare("SELECT * FROM reportajes WHERE id != ? AND estado = 'publicado' ORDER BY fecha DESC LIMIT 3");
     $stmt->execute([$r['id']]);
     $relacionados = $stmt->fetchAll();
 }
 
-// Tiempo de lectura
 $palabras = str_word_count(strip_tags($r['contenido'] ?: $r['resumen']));
 $minutos = max(1, ceil($palabras / 200));
 
@@ -55,7 +50,12 @@ $mes_en = date('F', strtotime($r['fecha']));
 $mes_es = $meses_es[$mes_en] ?? $mes_en;
 $fecha_es = date('d', strtotime($r['fecha'])) . ' de ' . $mes_es . ' de ' . date('Y', strtotime($r['fecha']));
 
-// URL para compartir
+// Ruta de imagen (upload o assets)
+$ruta_imagen = '';
+if ($r['imagen']) {
+    $ruta_imagen = str_starts_with($r['imagen'], 'uploads/') ? $r['imagen'] : 'assets/images/' . $r['imagen'];
+}
+
 $url_actual = 'http' . (isset($_SERVER['HTTPS']) ? 's' : '') . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
 $url_compartir = urlencode($url_actual);
 $titulo_compartir = urlencode($r['titulo']);
@@ -91,8 +91,8 @@ require 'includes/header.php';
   <div class="row">
     <div class="col-lg-10 mx-auto">
 
-      <?php if ($r['imagen']): ?>
-        <img src="assets/images/<?= htmlspecialchars($r['imagen']) ?>"
+      <?php if ($ruta_imagen): ?>
+        <img src="<?= htmlspecialchars($ruta_imagen) ?>"
              class="img-fluid radius-image mb-4"
              style="width:100%;max-height:500px;object-fit:cover;border-radius:14px;" alt="">
       <?php endif; ?>
@@ -101,7 +101,6 @@ require 'includes/header.php';
         <?= $r['contenido'] ?: '<p class="lead">' . htmlspecialchars($r['resumen']) . '</p>' ?>
       </div>
 
-      <!-- COMPARTIR -->
       <hr class="my-5" style="border-color:#1a2332;">
       <h4 style="margin-bottom:20px;">Comparte este reportaje</h4>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -124,35 +123,27 @@ require 'includes/header.php';
       </div>
 
       <hr class="my-5" style="border-color:#1a2332;">
-      <a href="reportajes.php" class="btn btn-style btn-primary">
-        ← Volver a Reportajes
-      </a>
+      <a href="reportajes.php" class="btn btn-style btn-primary">← Volver a Reportajes</a>
     </div>
   </div>
 </div>
 
-<!-- RELACIONADOS -->
 <?php if (!empty($relacionados)): ?>
 <section style="background:#111a28;padding:60px 0;margin-top:40px;">
   <div class="container">
     <h3 class="title-big text-center mb-5" style="color:#fff;">También te puede interesar</h3>
     <div class="row">
-      <?php foreach ($relacionados as $rel): ?>
+      <?php foreach ($relacionados as $rel):
+        $ruta_rel = str_starts_with($rel['imagen'], 'uploads/') ? $rel['imagen'] : 'assets/images/' . $rel['imagen'];
+      ?>
         <div class="col-lg-4 col-md-6 mt-4">
           <a href="reportaje.php?slug=<?= urlencode($rel['slug']) ?>" style="text-decoration:none;color:inherit;">
             <div style="background:#0d1520;border-radius:12px;overflow:hidden;height:100%;">
-              <img src="assets/images/<?= htmlspecialchars($rel['imagen']) ?>"
-                   style="width:100%;height:200px;object-fit:cover;" alt="">
+              <img src="<?= htmlspecialchars($ruta_rel) ?>" style="width:100%;height:200px;object-fit:cover;" alt="">
               <div style="padding:20px;">
-                <span style="font-size:11px;color:#ff2e2e;font-weight:600;text-transform:uppercase;">
-                  <?= htmlspecialchars($rel['categoria']) ?>
-                </span>
-                <h4 style="margin-top:10px;font-size:18px;color:#fff;line-height:1.4;">
-                  <?= htmlspecialchars($rel['titulo']) ?>
-                </h4>
-                <p style="font-size:12px;color:#6b7280;margin-top:10px;">
-                  <?= date('d M Y', strtotime($rel['fecha'])) ?>
-                </p>
+                <span style="font-size:11px;color:#ff2e2e;font-weight:600;text-transform:uppercase;"><?= htmlspecialchars($rel['categoria']) ?></span>
+                <h4 style="margin-top:10px;font-size:18px;color:#fff;line-height:1.4;"><?= htmlspecialchars($rel['titulo']) ?></h4>
+                <p style="font-size:12px;color:#6b7280;margin-top:10px;"><?= date('d M Y', strtotime($rel['fecha'])) ?></p>
               </div>
             </div>
           </a>

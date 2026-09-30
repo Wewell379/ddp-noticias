@@ -4,22 +4,20 @@ require 'config/db.php';
 $page_title = 'DDP Noticias - Diálogo y Desarrollo Perú';
 $current = 'inicio';
 
-// Reportajes publicados (excluye borradores)
 $reportajes = $pdo->query("SELECT * FROM reportajes WHERE estado = 'publicado' ORDER BY fecha DESC LIMIT 4")->fetchAll();
 $destacado = $reportajes[0] ?? null;
 $otros = array_slice($reportajes, 1, 3);
 
-// Noticias publicadas
 $noticias = $pdo->query("SELECT * FROM noticias WHERE estado = 'publicado' ORDER BY fecha DESC LIMIT 3")->fetchAll();
-
-// Boletín más reciente (boletines no tiene columna estado)
 $boletin = $pdo->query("SELECT * FROM boletines ORDER BY fecha DESC LIMIT 1")->fetch();
-
-// Podcasts publicados
 $podcasts = $pdo->query("SELECT * FROM podcasts WHERE estado = 'publicado' ORDER BY fecha DESC LIMIT 4")->fetchAll();
-
-// Especiales publicados
 $especiales = $pdo->query("SELECT * FROM especiales WHERE estado = 'publicado' ORDER BY fecha DESC")->fetchAll();
+
+// Helper para rutas
+function rutaImg($img) {
+    if (empty($img)) return '';
+    return str_starts_with($img, 'uploads/') ? $img : 'assets/images/' . $img;
+}
 
 require 'includes/header.php';
 ?>
@@ -31,7 +29,7 @@ require 'includes/header.php';
       <div class="video-gd-right col-lg-6 p-0">
         <div class="position-relative">
           <a href="reportaje.php?slug=<?= urlencode($destacado['slug']) ?>">
-            <img src="assets/images/<?= htmlspecialchars($destacado['imagen']) ?>" alt="" class="img-fluid">
+            <img src="<?= htmlspecialchars(rutaImg($destacado['imagen'])) ?>" alt="" class="img-fluid">
           </a>
         </div>
       </div>
@@ -61,40 +59,25 @@ require 'includes/header.php';
         <?php foreach ($otros as $r): ?>
           <div class="col-lg-4 col-md-6 grids5-info mt-5">
             <a href="reportaje.php?slug=<?= urlencode($r['slug']) ?>" class="d-block">
-              <img src="assets/images/<?= htmlspecialchars($r['imagen']) ?>" alt="" class="img-fluid">
+              <img src="<?= htmlspecialchars(rutaImg($r['imagen'])) ?>" alt="" class="img-fluid">
             </a>
             <div class="blog-info">
               <h5><?= date('M d, Y', strtotime($r['fecha'])) ?></h5>
-              <h4>
-                <a href="reportaje.php?slug=<?= urlencode($r['slug']) ?>" class="d-block">
-                  <?= htmlspecialchars($r['titulo']) ?>
-                </a>
-              </h4>
-              <a href="reportaje.php?slug=<?= urlencode($r['slug']) ?>" class="btn mt-4 p-0">
-                Leer <span class="fa fa-arrow-right"></span>
-              </a>
+              <h4><a href="reportaje.php?slug=<?= urlencode($r['slug']) ?>" class="d-block"><?= htmlspecialchars($r['titulo']) ?></a></h4>
+              <a href="reportaje.php?slug=<?= urlencode($r['slug']) ?>" class="btn mt-4 p-0">Leer <span class="fa fa-arrow-right"></span></a>
             </div>
           </div>
         <?php endforeach; ?>
       </div>
-      <div class="pagination">
-        <ul><li><a href="reportajes.php">Ver todos</a></li></ul>
-      </div>
+      <div class="pagination"><ul><li><a href="reportajes.php">Ver todos</a></li></ul></div>
     </div>
   </section>
 </div>
 
 <section class="breadcrumb-area py-sm-5 py-1">
-  <div class="container">
-    <div class="row">
-      <div class="col-md-12">
-        <div class="breadcrumb-contents">
-          <h2 class="title-big">Noticias Recientes</h2>
-          <a class="anchor" id="actualidad"></a>
-        </div>
-      </div>
-    </div>
-  </div>
+  <div class="container"><div class="row"><div class="col-md-12">
+    <div class="breadcrumb-contents"><h2 class="title-big">Noticias Recientes</h2><a class="anchor" id="actualidad"></a></div>
+  </div></div></div>
 </section>
 
 <div class="grids-block-5 py-5">
@@ -108,14 +91,8 @@ require 'includes/header.php';
             </a>
             <div class="blog-info">
               <h5><?= date('F d, Y', strtotime($n['fecha'])) ?></h5>
-              <h4>
-                <a target="_blank" href="<?= htmlspecialchars($n['url_externa']) ?>" class="d-block">
-                  <?= htmlspecialchars($n['titulo']) ?>
-                </a>
-              </h4>
-              <a target="_blank" href="<?= htmlspecialchars($n['url_externa']) ?>" class="btn mt-4 p-0">
-                Leer <span class="fa fa-arrow-right"></span>
-              </a>
+              <h4><a target="_blank" href="<?= htmlspecialchars($n['url_externa']) ?>" class="d-block"><?= htmlspecialchars($n['titulo']) ?></a></h4>
+              <a target="_blank" href="<?= htmlspecialchars($n['url_externa']) ?>" class="btn mt-4 p-0">Leer <span class="fa fa-arrow-right"></span></a>
             </div>
           </div>
         <?php endforeach; ?>

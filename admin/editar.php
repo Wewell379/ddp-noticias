@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($titulo === '') {
         $error = 'El título es obligatorio';
     } else {
-        // Manejar subida de imagen
+        // Manejar subida de imagen (con prioridad)
         $imagen = $_POST['imagen_actual'] ?? '';
         if (!empty($_FILES['imagen_file']['name'])) {
             $ext = strtolower(pathinfo($_FILES['imagen_file']['name'], PATHINFO_EXTENSION));
@@ -75,6 +75,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+
+// === Imágenes disponibles en la biblioteca ===
+$imagenes_media = $pdo->query("SELECT * FROM media WHERE tipo = 'imagen' ORDER BY creado_en DESC")->fetchAll();
 
 $page_title = $es_nuevo ? 'Nuevo reportaje' : 'Editar reportaje #' . $id;
 $page_subtitle = $es_nuevo ? 'Crea un nuevo reportaje para el sitio' : 'Modifica el contenido del reportaje';
@@ -166,23 +169,33 @@ ob_start();
       <div class="card">
         <div class="card-title"><i class="fa fa-image"></i> Imagen destacada</div>
 
-        <?php if (!empty($r['imagen']) && file_exists("../assets/images/{$r['imagen']}")): ?>
-          <div style="margin-bottom:14px;">
-            <img src="../assets/images/<?= htmlspecialchars($r['imagen']) ?>" style="width:100%;border-radius:8px;max-height:180px;object-fit:cover;">
-            <div style="font-size:12px;color:#6b7280;margin-top:6px;">Actual: <?= htmlspecialchars($r['imagen']) ?></div>
+        <!-- Preview de imagen actual -->
+        <div id="preview-container" style="margin-bottom:14px;<?= empty($r['imagen']) ? 'display:none;' : '' ?>">
+          <img id="preview-img" src="<?= !empty($r['imagen']) ? '../assets/images/' . htmlspecialchars($r['imagen']) : '' ?>"
+               style="width:100%;border-radius:8px;max-height:200px;object-fit:cover;" alt=""
+               onerror="this.src='../assets/images/logo.png'">
+          <div style="font-size:12px;color:#6b7280;margin-top:6px;" id="preview-nombre">
+            Actual: <?= htmlspecialchars($r['imagen']) ?>
           </div>
-        <?php endif; ?>
+        </div>
 
         <input type="hidden" name="imagen_actual" value="<?= htmlspecialchars($r['imagen']) ?>">
 
+        <!-- Selector de biblioteca -->
         <div class="form-group">
-          <label>Nombre de imagen existente</label>
-          <input type="text" name="imagen_url" class="form-control" value="<?= htmlspecialchars($r['imagen']) ?>" placeholder="Ej: video.jpg">
+          <button type="button" class="btn btn-primary" style="width:100%;justify-content:center;" onclick="abrirSelector()">
+            <i class="fa fa-picture-o"></i> Seleccionar de la biblioteca
+          </button>
         </div>
 
         <div class="form-group">
-          <label>O sube una nueva</label>
-          <input type="file" name="imagen_file" class="form-control" accept="image/*">
+          <label>O escribe el nombre directamente</label>
+          <input type="text" name="imagen_url" id="imagen_url" class="form-control" value="<?= htmlspecialchars($r['imagen']) ?>" placeholder="Ej: video.jpg" onchange="actualizarPreview()">
+        </div>
+
+        <div class="form-group">
+          <label>O sube una nueva (desde tu PC)</label>
+          <input type="file" name="imagen_file" class="form-control" accept="image/*" onchange="previewLocal(this)">
         </div>
       </div>
     </div>
@@ -197,7 +210,55 @@ ob_start();
   </div>
 </form>
 
-<!-- TinyMCE Editor -->
+<!-- MODAL SELECTOR DE IMÁGENES -->
+<div id="modal-selector" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:1000;padding:40px;overflow-y:auto;">
+  <div style="max-width:1000px;margin:0 auto;background:#111a28;border-radius:16px;padding:30px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+      <div>
+        <h2 style="font-size:22px;color:#fff;">Biblioteca de Imágenes</h2>
+        <p style="color:#9ca3af;font-size:13px;margin-top:4px;"><?= count($imagenes_media) ?> imágenes disponibles</p>
+      </div>
+      <button type="button" onclick="cerrarSelector()" style="background:#1a2332;color:#fff;border:none;width:40px;height:40px;border-radius:8px;font-size:20px;cursor:pointer;">
+        <i class="fa fa-times"></i>
+      </button>
+    </div>
+
+    <?php if (empty($imagenes_media)): ?>
+      <div style="text-align:center;padding:60px 20px;">
+        <i class="fa fa-image" style="font-size:60px;color:#374151;"></i>
+        <h3 style="margin-top:16px;color:#fff;">No hay imágenes en la biblioteca</h3>
+        <p style="color:#9ca3af;margin-top:8px;">Sube imágenes primero desde <a href="media.php" style="color:#ff2e2e;">Media Library</a></p>
+      </div>
+    <?php else: ?>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;">
+        <?php foreach ($imagenes_media as $img): ?>
+          <div style="cursor:pointer;border:2px solid transparent;border-radius:10px;overflow:hidden;background:#0d1520;transition:all 0.2s;"
+               onclick="seleccionarImagen('<?= htmlspecialchars($img['nombre_archivo']) ?>', '<?= htmlspecialchars($img['ruta']) ?>')"
+               onmouseover="this.style.borderColor='#ff2e2e';this.style.transform='translateY(-3px)'"
+               onmouseout="this.style.borderColor='transparent';this.style.transform='translateY(0)'">
+            <img src="../<?= htmlspecialchars($img['ruta']) ?>" style="width:100%;height:130px;object-fit:cover;">
+            <div style="padding:10px;">
+              <div style="font-size:12px;color:#e5e7eb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="<?= htmlspecialchars($img['nombre_original']) ?>">
+                <?= htmlspecialchars($img['nombre_original']) ?>
+              </div>
+              <div style="font-size:10px;color:#6b7280;margin-top:4px;">
+                <?= $img['ancho'] ? $img['ancho'] . '×' . $img['alto'] : '' ?>
+              </div>
+            </div>
+          </div>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+
+    <div style="margin-top:24px;text-align:center;">
+      <a href="media.php" target="_blank" class="btn btn-outline">
+        <i class="fa fa-external-link"></i> Ir a la Biblioteca completa
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- TinyMCE -->
 <script src="https://cdn.jsdelivr.net/npm/tinymce@6/tinymce.min.js"></script>
 <script>
 tinymce.init({
@@ -223,6 +284,72 @@ document.getElementById('titulo')?.addEventListener('input', function() {
 });
 document.getElementById('slug')?.addEventListener('input', function() {
   this.dataset.manual = '1';
+});
+
+// Modal selector
+function abrirSelector() {
+  document.getElementById('modal-selector').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+function cerrarSelector() {
+  document.getElementById('modal-selector').style.display = 'none';
+  document.body.style.overflow = 'auto';
+}
+
+function seleccionarImagen(nombre, ruta) {
+  // El campo de texto espera solo el nombre del archivo (compatibilidad con assets/images)
+  // Pero si la imagen está en uploads/, usamos la ruta completa
+  const campo = document.getElementById('imagen_url');
+  if (ruta.startsWith('uploads/')) {
+    campo.value = ruta;
+  } else {
+    campo.value = nombre;
+  }
+
+  // Actualizar preview
+  document.getElementById('preview-container').style.display = 'block';
+  document.getElementById('preview-img').src = '../' + ruta;
+  document.getElementById('preview-nombre').innerText = 'Actual: ' + nombre;
+
+  cerrarSelector();
+}
+
+// Preview al escribir manualmente
+function actualizarPreview() {
+  const nombre = document.getElementById('imagen_url').value.trim();
+  const cont = document.getElementById('preview-container');
+  const img = document.getElementById('preview-img');
+  if (nombre) {
+    cont.style.display = 'block';
+    // Intentar primero en assets/images, luego en uploads/
+    img.src = nombre.startsWith('uploads/') ? '../' + nombre : '../assets/images/' + nombre;
+    document.getElementById('preview-nombre').innerText = 'Actual: ' + nombre;
+  } else {
+    cont.style.display = 'none';
+  }
+}
+
+// Preview al subir archivo local
+function previewLocal(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      document.getElementById('preview-container').style.display = 'block';
+      document.getElementById('preview-img').src = e.target.result;
+      document.getElementById('preview-nombre').innerText = 'Nueva: ' + input.files[0].name;
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+// Cerrar modal con ESC
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') cerrarSelector();
+});
+
+// Cerrar modal al clic fuera
+document.getElementById('modal-selector')?.addEventListener('click', function(e) {
+  if (e.target === this) cerrarSelector();
 });
 </script>
 

@@ -1,0 +1,10 @@
+# Bloquear ejecución de PHP en carpeta uploads
+php_flag engine off
+<FilesMatch "\.(php|php3|php4|php5|php7|phtml|pl|py|jsp|asp|sh|cgi)$">
+  Require all denied
+</FilesMatch>
+
+# Permitir solo estos tipos de archivo
+<FilesMatch "\.(jpg|jpeg|png|webp|gif|mp3|wav|m4a|ogg|mp4|webm|pdf)$">
+  Require all granted
+</FilesMatch>

@@ -3,6 +3,14 @@ session_start();
 if (!isset($_SESSION['admin'])) { header('Location: login.php'); exit; }
 require '../config/db.php';
 
+// Helper para rutas de imagen
+function rutaImagen($imagen) {
+    if (empty($imagen)) return '';
+    if (str_starts_with($imagen, 'uploads/')) return '../' . $imagen;
+    if (file_exists("../assets/images/{$imagen}")) return '../assets/images/' . $imagen;
+    return '';
+}
+
 // === Filtros ===
 $busqueda = trim($_GET['q'] ?? '');
 $filtro_cat = trim($_GET['cat'] ?? '');
@@ -29,7 +37,7 @@ $stmt = $pdo->prepare("SELECT * FROM reportajes $sql_where ORDER BY fecha DESC")
 $stmt->execute($params);
 $reportajes = $stmt->fetchAll();
 
-// === Categorías para el filtro ===
+// Categorías para el filtro
 $categorias = $pdo->query("SELECT nombre FROM categorias WHERE activa = 1 ORDER BY orden")->fetchAll(PDO::FETCH_COLUMN);
 if (empty($categorias)) {
     $categorias = $pdo->query("SELECT DISTINCT categoria FROM reportajes WHERE categoria IS NOT NULL")->fetchAll(PDO::FETCH_COLUMN);
@@ -91,7 +99,7 @@ ob_start();
   </form>
 </div>
 
-<!-- TABLA DE REPORTAJES -->
+<!-- TABLA -->
 <div class="card" style="padding:0;overflow:hidden;">
   <?php if (empty($reportajes)): ?>
     <div style="padding:60px 20px;text-align:center;">
@@ -119,8 +127,9 @@ ob_start();
           <tr>
             <td><strong>#<?= $r['id'] ?></strong></td>
             <td>
-              <?php if (!empty($r['imagen']) && file_exists("../assets/images/{$r['imagen']}")): ?>
-                <img src="../assets/images/<?= htmlspecialchars($r['imagen']) ?>" style="width:60px;height:40px;object-fit:cover;border-radius:6px;">
+              <?php $ruta = rutaImagen($r['imagen']); ?>
+              <?php if ($ruta): ?>
+                <img src="<?= htmlspecialchars($ruta) ?>" style="width:60px;height:40px;object-fit:cover;border-radius:6px;">
               <?php else: ?>
                 <div style="width:60px;height:40px;background:#1a2332;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#4b5563;">
                   <i class="fa fa-image"></i>
@@ -158,7 +167,7 @@ ob_start();
               <a href="editar.php?id=<?= $r['id'] ?>" class="btn btn-sm btn-secondary" title="Editar">
                 <i class="fa fa-pencil"></i>
               </a>
-              <form method="post" action="eliminar.php" style="display:inline;" onsubmit="return confirm('¿Eliminar este reportaje? Esta acción no se puede deshacer.');">
+              <form method="post" action="eliminar.php" style="display:inline;" onsubmit="return confirm('¿Eliminar este reportaje?');">
                 <input type="hidden" name="id" value="<?= $r['id'] ?>">
                 <input type="hidden" name="tipo" value="reportaje">
                 <button type="submit" class="btn btn-sm btn-danger" title="Eliminar">
